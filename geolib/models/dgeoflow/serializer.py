@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from io import BytesIO
-from typing import _GenericAlias
+from typing import get_args, get_origin
 from zipfile import ZIP_DEFLATED, ZipFile
 
 from pydantic import DirectoryPath, FilePath
@@ -21,23 +21,26 @@ class DGeoFlowBaseSerializer(BaseSerializer, metaclass=ABCMeta):
         serialized_datastructure: dict = {}
 
         for field, fieldtype in get_filtered_type_hints(self.ds):
-            # On List types, write a folder
-            if type(fieldtype) == _GenericAlias:  # quite hacky
-                element_type, *_ = fieldtype.__args__  # use getargs in 3.8
+            # If fieldtype is a list[X], handle as a folder
+            if get_origin(fieldtype) is list:
+                element_type = get_args(fieldtype)[0]  # Extract element type
 
                 folder = element_type.structure_group()
                 serialized_datastructure[folder] = {}
 
                 for i, data in enumerate(getattr(self.ds, field)):
                     suffix = f"_{i}" if i > 0 else ""
-                    fn = element_type.structure_name() + suffix + ".json"
-                    serialized_datastructure[folder][fn] = data.model_dump_json(indent=4)
+                    fn = f"{element_type.structure_name()}{suffix}.json"
+                    serialized_datastructure[folder][fn] = data.model_dump_json(
+                        indent=4
+                    )
 
             # Otherwise it is a single .json in the root folder
             else:
-                fn = fieldtype.structure_name() + ".json"
-                data = getattr(self.ds, field)
-                serialized_datastructure[fn] = data.model_dump_json(indent=4)
+                fn = f"{fieldtype.structure_name()}.json"
+                serialized_datastructure[fn] = getattr(self.ds, field).model_dump_json(
+                    indent=4
+                )
 
         return serialized_datastructure
 

@@ -1,7 +1,5 @@
 # FROM https://github.com/python/cpython/blob/6292be7adf247589bbf03524f8883cb4cb61f3e9/Lib/typing.py
-from typing import _GenericAlias
-from typing import get_args as get_args
-from typing import get_type_hints
+from typing import get_args, get_origin, get_type_hints
 
 
 def unpack_if_union(tp):
@@ -12,11 +10,11 @@ def unpack_if_union(tp):
 
 
 def is_union(tp):
-    return isinstance(tp, _GenericAlias) and tp._name in (None, "Optional")
+    return get_origin(tp) is not None and len(get_args(tp)) > 1
 
 
 def is_list(tp):
-    return isinstance(tp, _GenericAlias) and tp._name == "List"
+    return get_origin(tp) is list
 
 
 def get_filtered_type_hints(class_type: type) -> list[tuple[str, type]]:

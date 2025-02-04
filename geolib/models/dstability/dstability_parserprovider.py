@@ -1,5 +1,5 @@
 import logging
-from typing import _GenericAlias
+from typing import get_args, get_origin
 from zipfile import ZipFile
 
 from pydantic import DirectoryPath, FilePath
@@ -30,9 +30,9 @@ class DStabilityParser(BaseParser):
 
         # Find required .json files via type hints
         for field, fieldtype in get_filtered_type_hints(self.structure):
-            # On List types, parse a folder
-            if type(fieldtype) == _GenericAlias:  # quite hacky
-                element_type, *_ = fieldtype.__args__  # use getargs in 3.8
+            # If fieldtype is a list (e.g., list[SomeModel])
+            if get_origin(fieldtype) is list:
+                element_type = get_args(fieldtype)[0]  # Extract element type
                 ds[field] = self.__parse_folder(element_type, filepath / "")
 
             # Otherwise it is a single .json in the root folder
